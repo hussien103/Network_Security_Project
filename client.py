@@ -1,6 +1,6 @@
 import socket
 import threading
-from encryption import encrypt_message_aes, decrypt_message_aes, generate_key
+from encryption import *
 
 def send_messages(client_socket, aes_key, client_id):
     """Thread function to send messages."""
@@ -16,7 +16,7 @@ def receive_messages(client_socket, shared_aes_key, client_id):
     """Thread function to receive messages."""
     while True:
         try:
-            data = client_socket.recv(1024)
+            data = client_socket.recv(2048)
             if not data:
                 print(f"[{client_id}] Connection closed by server.")
                 break
@@ -30,6 +30,8 @@ def start_client(client_id):
     host = '127.0.0.1'
     port = 65432
 
+    other_rsa_private_key, other_rsa_public_key = generate_rsa_keys()
+    # private_key2, public_key2 = generate_rsa_keys()
     # Generate AES key
     aes_key = generate_key()
     print(f"[{client_id}] Generated AES Key: {aes_key}")
@@ -37,18 +39,22 @@ def start_client(client_id):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
         print(f"[{client_id}] Connected to {host}:{port}")
-
+        
+        encrypted_aes_key = encrypt_with_rsa(aes_key, other_rsa_public_key)
         # Send AES key to the server
-        client_socket.sendall(aes_key)
-        print(f"[{client_id}] Sent AES Key to Server.")
-
+        client_socket.sendall(encrypted_aes_key)
+        print(f"[{client_id}] Sent Encrypted AES Key to Server.")
+        print(f"{encrypted_aes_key}")
         # Receive the other client's AES key from the server
-        shared_aes_key = client_socket.recv(16)  # 16 bytes for AES-128
-        print(f"[{client_id}] Received Shared AES Key: {shared_aes_key}")
+        shared_aes_key = client_socket.recv(256)  # 16 bytes for AES-128
+        print(f"[{client_id}] Received Shared Encrypted AES Key: {shared_aes_key}")
+
+        decrypt_aes_key = decrypt_with_rsa(shared_aes_key,other_rsa_private_key)
+        print(f"{decrypt_aes_key}")
 
         # Start send and receive threads
-        send_thread = threading.Thread(target=send_messages, args=(client_socket, aes_key, client_id))
-        receive_thread = threading.Thread(target=receive_messages, args=(client_socket, shared_aes_key, client_id))
+        send_thread = threading.Thread(target=send_messages, args=(client_socket, aes_key,client_id))
+        receive_thread = threading.Thread(target=receive_messages, args=(client_socket, decrypt_aes_key, client_id))
 
         send_thread.start()
         receive_thread.start()
