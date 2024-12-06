@@ -7,29 +7,30 @@ client_keys = {}
 def handle_client(client_socket, client_id):
     """Handle communication with a client."""
     global client_sockets, client_keys
-    while True:
-        try:
-            data = client_socket.recv(1024)
+    try:
+        # Receive and store the client's public key
+        public_key = client_socket.recv(2048)
+        client_keys[client_id] = public_key
+        print(f"Received public key from {client_id}.")
+
+        # Send the other client's public key
+        other_client_id = "Client 1" if client_id == "Client 2" else "Client 2"
+        if other_client_id in client_keys:
+            client_socket.sendall(client_keys[other_client_id])
+            print(f"Sent {other_client_id}'s public key to {client_id}.")
+        
+        # Relay AES keys
+        while True:
+            data = client_socket.recv(256)
             if not data:
                 break
-
-            if client_id == "Client 1":
-                # Store Client 1's public key and send it to Client 2
-                client_keys["Client 1"] = data
-                print(f"Received public key from {client_id}")
-                if "Client 2" in client_sockets:
-                    client_sockets["Client 2"].sendall(data)
-                    print("Sent public key from Client 1 to Client 2")
-
-            elif client_id == "Client 2":
-                # Relay messages from Client 2 to Client 1
-                if "Client 1" in client_sockets:
-                    client_sockets["Client 1"].sendall(data)
-        except ConnectionResetError:
-            break
-
-    print(f"{client_id} disconnected.")
-    client_socket.close()
+            if other_client_id in client_sockets:
+                client_sockets[other_client_id].sendall(data)
+                print(f"Relayed encrypted AES key from {client_id} to {other_client_id}.")
+    except ConnectionResetError:
+        print(f"{client_id} disconnected.")
+    finally:
+        client_socket.close()
 
 def start_server():
     host = '127.0.0.1'
@@ -45,7 +46,6 @@ def start_server():
             client_id = client_socket.recv(1024).decode()
             client_sockets[client_id] = client_socket
             print(f"{client_id} connected from {addr}.")
-
             threading.Thread(target=handle_client, args=(client_socket, client_id)).start()
 
 if __name__ == "__main__":
