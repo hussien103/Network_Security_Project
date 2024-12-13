@@ -1,3 +1,5 @@
+
+# Updated server.py
 import socket
 import threading
 
@@ -6,11 +8,10 @@ client_keys = {}
 lock = threading.Lock()
 
 def handle_client(client_socket, client_id):
-    """Handle communication with a client."""
     global client_sockets, client_keys
     try:
         while True:
-            data = client_socket.recv(1024)
+            data = client_socket.recv(4096)
             if not data:
                 break
 
@@ -31,7 +32,7 @@ def handle_client(client_socket, client_id):
                         client_sockets[other_client_id].sendall(data)
                         print(f"Forwarded public key from {client_id} to {other_client_id}.")
             else:
-                # Forward encrypted messages between clients
+                # Forward encrypted messages and signatures between clients
                 other_client_id = "Client 1" if client_id == "Client 2" else "Client 2"
                 with lock:
                     if other_client_id in client_sockets:
