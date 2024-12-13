@@ -27,40 +27,37 @@ def receive_messages(client_socket, aes_key, client_id):
             break
 
 def start_client(client_id):
+    """Start the client and handle key exchange and communication."""
     host = '127.0.0.1'
     port = 65432
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
         client_socket.sendall(client_id.encode())  # Send client ID to the server
-        print(f"[{client_id}] Connected to server at {host}:{port}")
+        print(f"[{client_id}] Connected to server at {host}:{port}. You can start the conversation!")
 
-        # Generate RSA keys for this client
+        aes_key = b""  # Initialize AES key
+
+        # Send and receive RSA public keys
         rsa_private_key, rsa_public_key = generate_rsa_keys()
         client_socket.sendall(rsa_public_key)  # Send public key to server
-        print(f"[{client_id}] Sent RSA public key to server:\n{rsa_public_key.decode()}")
+        print(f"[{client_id}] Sent RSA public key to server.")
 
         # Receive the other client's public key
-        other_public_key_data = client_socket.recv(2048)
-        print(f"[{client_id}] Received the other client's public key:\n{other_public_key_data}")
+        other_public_key = client_socket.recv(2048)  # Receive the other client's public key
+        print(f"[{client_id}] Received RSA public key from the other client.")
 
-    
-        # AES key generation and exchange logic
+        # Key exchange logic
         if client_id == "Client 1":
-            # Receive encrypted AES key from Client 2
             encrypted_aes_key = client_socket.recv(256)
             print(f"[{client_id}] Received encrypted AES key from Client 2.")
             aes_key = decrypt_with_rsa(encrypted_aes_key, rsa_private_key)
             print(f"[{client_id}] Decrypted AES key: {aes_key}")
-
         elif client_id == "Client 2":
-            # Generate AES key
             aes_key = generate_key()
             print(f"[{client_id}] Generated AES key: {aes_key}")
-
-            # Encrypt AES key with Client 1's public key
-            encrypted_aes_key = encrypt_with_rsa(aes_key, other_public_key_data)
-            client_socket.sendall(encrypted_aes_key)  # Send encrypted AES key to Client 1
+            encrypted_aes_key = encrypt_with_rsa(aes_key, other_public_key)
+            client_socket.sendall(encrypted_aes_key)
             print(f"[{client_id}] Sent encrypted AES key to Client 1.")
 
         # Start threads for communication
