@@ -2,6 +2,9 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Hash import SHA256
+from Crypto.Signature import pkcs1_15
+
 import base64
 
 BLOCK_SIZE = 16  # AES block size
@@ -105,3 +108,41 @@ def decrypt_with_rsa(encrypted_aes_key, private_key):
     decrypted_aes_key = cipher.decrypt(encrypted_aes_key)
     return decrypted_aes_key
 
+
+
+def hash_message(message):
+    """
+    Hash the message using SHA-256.
+    :param message: The original message (str)
+    :return: The hash digest (bytes)
+    """
+    hash_object = SHA256.new(message.encode())
+    return hash_object
+
+def sign_message(message, private_key):
+    """
+    Sign the hashed message with the sender's private key.
+    :param message: The original message (str)
+    :param private_key: Sender's RSA private key (PEM format)
+    :return: The digital signature (bytes)
+    """
+    rsa_key = RSA.import_key(private_key)
+    hashed_message = hash_message(message)
+    signature = pkcs1_15.new(rsa_key).sign(hashed_message)
+    return signature
+
+def verify_signature(message, signature, public_key):
+    """
+    Verify the digital signature of a message.
+    :param message: The received message (str)
+    :param signature: The digital signature (bytes)
+    :param public_key: Sender's RSA public key (PEM format)
+    :return: True if valid, False otherwise
+    """
+    rsa_key = RSA.import_key(public_key)
+    hashed_message = hash_message(message)
+    try:
+        pkcs1_15.new(rsa_key).verify(hashed_message, signature)
+        return True
+    except (ValueError, TypeError):
+        return False
