@@ -1,4 +1,4 @@
-# Updated client.py
+# client.py
 import socket
 import threading
 from encryption import *
@@ -42,10 +42,24 @@ def receive_messages(client_socket, aes_key, client_id, other_public_key):
                 print(f"[{client_id}] Received (Verified): {decrypted_message}")
             else:
                 print(f"[{client_id}] Received message failed verification.")
-
         except ConnectionResetError:
             print(f"[{client_id}] Server connection lost.")
             break
+
+def authenticate(client_socket, client_id):
+    password = input(f"Enter password for {client_id}: ")
+    client_socket.sendall(f"{client_id}::{password}".encode())
+    response = client_socket.recv(1024).decode()
+
+    if response == "AUTH_SUCCESS":
+        print(f"[{client_id}] Authentication successful.")
+        return True
+    elif response == "REGISTERED_SUCCESS":
+        print(f"[{client_id}] Registration successful.")
+        return True
+    else:
+        print(f"[{client_id}] Authentication failed.")
+        return False
 
 def start_client(client_id):
     host = '127.0.0.1'
@@ -53,8 +67,11 @@ def start_client(client_id):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((host, port))
-        client_socket.sendall(client_id.encode())  # Send client ID to the server
         print(f"[{client_id}] Connected to server at {host}:{port}")
+
+        # Authenticate
+        if not authenticate(client_socket, client_id):
+            return
 
         # Generate RSA keys
         private_key, public_key = generate_rsa_keys()
@@ -91,5 +108,5 @@ def start_client(client_id):
         receive_thread.join()
 
 if __name__ == "__main__":
-    client_id = input("Enter Client ID (e.g., Client 1 or Client 2): ")
+    client_id = input("Enter Client ID (Client 1 or Client 2): ")
     start_client(client_id)
