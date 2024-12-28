@@ -7,13 +7,15 @@ from encryption import encrypt_message_aes, decrypt_message_aes
 from diffie_hellman import compute_shared_key, compute_public_key, derive_aes_key
 from rsa_key import generate_rsa_keys, sign_message, verify_signature
 from cryptography.hazmat.primitives import serialization
-from client import save_keys, load_keys, authenticate
+from client import save_keys, load_keys, authenticate,derive_aes_key_from_passphrase
 
 
 class TestClientApplication(unittest.TestCase):
 
     def setUp(self):
         # Setup reusable keys and data
+        self.passphrase = "test"
+        self.owner_aes_key = derive_aes_key_from_passphrase("test")
         self.rsa_public_key, self.rsa_private_key = generate_rsa_keys()
         self.private_dh_key = 12345
         self.q = 23
@@ -24,8 +26,8 @@ class TestClientApplication(unittest.TestCase):
 
     def test_save_and_load_keys(self):
         client_id = "client 1"
-        save_keys(client_id, self.rsa_public_key, self.rsa_private_key, self.private_dh_key)
-        loaded_public_key, loaded_private_key, loaded_dh_key = load_keys(client_id)
+        save_keys(client_id, self.rsa_public_key, self.rsa_private_key, self.private_dh_key,self.owner_aes_key)
+        loaded_public_key, loaded_private_key, loaded_dh_key = load_keys(client_id,self.owner_aes_key)
 
         # Validate RSA keys
         self.assertEqual(
@@ -54,7 +56,7 @@ class TestClientApplication(unittest.TestCase):
         self.assertEqual(self.private_dh_key, loaded_dh_key)
 
         # Cleanup
-        os.remove(f"{client_id}_keys.json")
+        os.remove(f"{client_id}_keys_encrypted.json")
 
     def test_aes_encryption_decryption(self):
         message = "Test Message"

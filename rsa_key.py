@@ -52,7 +52,6 @@ def sign_message(message, private_key):
         ),
         hashes.SHA256()
     )
-    print( signature)
     return signature
 
 def verify_signature(message, signature, public_key):

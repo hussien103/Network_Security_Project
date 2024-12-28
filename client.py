@@ -3,11 +3,10 @@ import os
 import socket
 import threading
 import base64
-from encryption import decrypt_message_aes,encrypt_message_aes
+from encryption import decrypt_message_aes,encrypt_message_aes,generate_key
 from diffie_hellman import generate_dh_params, compute_shared_key, compute_public_key, generate_private_dh_key, derive_aes_key
 from rsa_key import *    # Assuming these functions are defined
-from cryptography.hazmat.primitives import serialization
-
+from keys_storage_management import load_keys,save_keys,derive_aes_key_from_passphrase
 def send_messages(client_socket, aes_key, client_id, private_key):
     """Thread function to send messages."""
     while True:
@@ -80,38 +79,6 @@ def authenticate(client_socket, client_id):
         print(f"[{client_id}] Authentication failed.")
         return False
 
-def save_keys(client_id, rsa_public_key, rsa_private_key, private_dh_key):
-    key_data = {
-        "rsa_public_key": rsa_public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode('utf-8'),
-        "rsa_private_key": rsa_private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ).decode('utf-8'),
-        "private_dh_key": private_dh_key
-    }
-    with open(f"{client_id}_keys.json", "w") as key_file:
-        json.dump(key_data, key_file)
-    print(f"[{client_id}] Keys saved to file.")
-
-def load_keys(client_id):
-    if os.path.exists(f"{client_id}_keys.json"):
-        with open(f"{client_id}_keys.json", "r") as key_file:
-            key_data = json.load(key_file)
-        rsa_public_key = serialization.load_pem_public_key(
-            key_data["rsa_public_key"].encode('utf-8')
-        )
-        rsa_private_key = serialization.load_pem_private_key(
-            key_data["rsa_private_key"].encode('utf-8'),
-            password=None
-        )
-        private_dh_key = key_data["private_dh_key"]
-        print(f"[{client_id}] Keys loaded from file.")
-        return rsa_public_key, rsa_private_key, private_dh_key
-    return None, None, None
 
 
 def start_client(client_id):
@@ -119,15 +86,18 @@ def start_client(client_id):
     port = 65432
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+        
+        passphrase = input("Enter your passphrase: ")
+
         client_socket.connect((host, port))
         print(f"[{client_id}] Connected to server at {host}:{port}")
 
-        # Load keys or generate new ones
-        rsa_public_key, rsa_private_key, private_dh_key = load_keys(client_id)
+        owner_aes_key = derive_aes_key_from_passphrase(passphrase)        # Load keys or generate new ones
+        rsa_public_key, rsa_private_key, private_dh_key = load_keys(client_id,owner_aes_key)
         if not rsa_public_key or not rsa_private_key or not private_dh_key:
             rsa_public_key, rsa_private_key = generate_rsa_keys()
             private_dh_key = generate_private_dh_key()
-            save_keys(client_id, rsa_public_key, rsa_private_key, private_dh_key)
+            save_keys(client_id, rsa_public_key, rsa_private_key, private_dh_key,owner_aes_key)
         else:
             print(f"[{client_id}] Using existing keys.")
 

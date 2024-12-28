@@ -21,11 +21,13 @@ def unpad(data):
 def encrypt_message_aes(plaintext, key):
     cipher = AES.new(key, AES.MODE_ECB)
     encrypted = cipher.encrypt(pad(plaintext.encode()))
+    print("Message Encrypted by aes")
     return base64.b64encode(encrypted).decode()
 
 def decrypt_message_aes(ciphertext, key):
     cipher = AES.new(key, AES.MODE_ECB)
     decrypted = unpad(cipher.decrypt(base64.b64decode(ciphertext.encode())))
+    print("Message decrypted by AES")
     return decrypted.decode()
 
 def generate_key():
