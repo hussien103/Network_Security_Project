@@ -22,7 +22,6 @@ def send_messages(client_socket, aes_key, client_id, private_key):
         payload = f"{signature_base64}::{encrypted_message}"
 
         client_socket.sendall(payload.encode())
-        print(f"[{client_id}] Sent (Encrypted): {encrypted_message}")
 
         if message.lower() == "exit":
             break
@@ -41,15 +40,11 @@ def receive_messages(client_socket, aes_key, client_id, other_public_key):
             # Split the received payload into signature and encrypted message
             signature, encrypted_message = data.split("::")
             signature = base64.b64decode(signature)
-            print("encrypted_message"+encrypted_message)
-            print("aes key")
-            print(aes_key)
+            
             # Decrypt the message using AES key
             decrypted_message = decrypt_message_aes(encrypted_message, aes_key)
-            print(f"Decrypted Message: {decrypted_message}")  # Debugging
 
             # Verify the signature using the decrypted message and RSA public key
-            print(f"Signature for verification: {signature}")  # Debugging
             if verify_signature(decrypted_message, signature, other_public_key):
                 print(f"[{client_id}] Received (Verified): {decrypted_message}")
             else:
@@ -117,7 +112,7 @@ def start_client(client_id):
         dh_params = client_socket.recv(1024).decode().split("::")
         q = int(dh_params[0])
         alpha = int(dh_params[1])
-        print(f"[{client_id}] Received DH parameters: q={q}, alpha={alpha}")
+        print(f"[{client_id}] Received DH parameters")
 
         # Step 5: Generate and send public DH key
         public_dh_key = compute_public_key(private_dh_key, q, alpha)
@@ -126,7 +121,7 @@ def start_client(client_id):
 
         # Step 6: Receive the other client's public DH key
         other_public_dh_key = int(client_socket.recv(1024).decode())
-        print(f"[{client_id}] Received other client's DH public key: {other_public_dh_key}")
+        print(f"[{client_id}] Received other client's DH public key")
 
         # Step 7: Compute shared AES key
         shared_key = compute_shared_key(other_public_dh_key, private_dh_key, q)

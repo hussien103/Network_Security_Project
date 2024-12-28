@@ -68,6 +68,7 @@ class TestClientApplication(unittest.TestCase):
         message = "Verify this message"
         signature = sign_message(message, self.rsa_private_key)
         self.assertTrue(verify_signature(message, signature, self.rsa_public_key))
+        print("signature verified")
 
     @patch('builtins.input', return_value="test_password")
     @patch('socket.socket')

@@ -97,11 +97,11 @@ def handle_client(client_socket, client_id):
         # Step 6: Send Diffie-Hellman parameters to the client
         dh_params_to_send = f"{q}::{alpha}".encode('utf-8')
         client_socket.sendall(dh_params_to_send)
-        print(f"Sent DH parameters to {client_id}. q={q}, alpha={alpha}")
+        print(f"Sent DH parameters to {client_id}.")
 
         # Step 7: Receive the client's public DH key
         public_dh_key = int(client_socket.recv(1024).decode())  # Decode to get the integer
-        print(f"Received DH public key from {client_id}: {public_dh_key}.")
+        print(f"Received DH public key from {client_id}.")
 
         # Store the public DH key
         with lock:
@@ -128,14 +128,14 @@ def handle_client(client_socket, client_id):
                 break  # Client disconnected
             
             # Print the received message
-            print(f"Received message from {client_id}: {message}")
+            print(f"Received message from {client_id}.")
 
             # Send the message to the other client
             with lock:
                 other_client_socket = client_sockets.get(other_client_id)
                 if other_client_socket:
                     other_client_socket.sendall(message.encode())
-                    print(f"Sent message to {other_client_id}: {message}")
+                    print(f"Sent message to {other_client_id}.")
 
     except Exception as e:
         print(f"Error handling client {client_id}: {e}")
